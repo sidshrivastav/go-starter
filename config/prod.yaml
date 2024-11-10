@@ -1,7 +1,0 @@
-database:
-  host: "prod-db.example.com"
-  user: "prod-user"
-  password: "prod-password"
-
-logging:
-  level: "error"
