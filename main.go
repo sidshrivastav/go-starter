@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"go-starter/config"
 )
@@ -14,15 +13,24 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Please specify the environment (dev/prod)")
-		return
+	// Load the application configuration
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading config: %s\n", err)
 	}
-	env := os.Args[1]
-	cfg := config.LoadConfig(env)
+
+	// Print loaded configurations
+	fmt.Printf("App Name: %s\n", cfg.AppName)
+	fmt.Printf("App Version: %s\n", cfg.AppVersion)
+
+	// Database configuration
+	fmt.Printf("Connecting to DB: %s:%d with user %s\n", cfg.Database.Host, cfg.Database.Port, cfg.Database.User)
+
+	// Logging configuration
+	fmt.Printf("Logging level: %s\n", cfg.Logging.Level)
 
 	http.HandleFunc("/", handler)
 	// Start HTTP server
-	addr := fmt.Sprintf(":%d", cfg.Port)
+	addr := fmt.Sprintf(":%d", cfg.AppPort)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
