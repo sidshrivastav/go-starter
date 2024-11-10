@@ -1,2 +1,7 @@
-port: 8080
-log_level: "info"
+app:
+  name: MyApp
+  version: 1.0.0
+  port: 8080
+
+logging:
+  level: "info"

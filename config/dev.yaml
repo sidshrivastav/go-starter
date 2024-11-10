@@ -1,1 +1,7 @@
-database_url: ""
+database:
+  host: "dev-db.example.com"
+  user: "dev-user"
+  password: "dev-password"
+
+logging:
+  level: "debug"

@@ -1,72 +1,65 @@
 package config
 
 import (
-	"gopkg.in/yaml.v2"
+	"fmt"
 	"log"
 	"os"
+
+	"github.com/spf13/viper"
 )
 
-type BaseConfig struct {
-	Port     int    `yaml:"port"`
-	LogLevel string `yaml:"log_level"`
-}
-
+// Config holds the loaded configuration values
 type Config struct {
-	BaseConfig
-	// Add any environment-specific fields here if needed
-	DatabaseURL string `yaml:"database_url"`
+	AppName    string `mapstructure:"app.name"`
+	AppVersion string `mapstructure:"app.version"`
+	AppPort    int    `mapstructure:"app.port"`
+	Database   struct {
+		Host     string `mapstructure:"database.host"`
+		Port     int    `mapstructure:"database.port"`
+		User     string `mapstructure:"database.user"`
+		Password string `mapstructure:"database.password"`
+	} `mapstructure:"database"`
+	Logging struct {
+		Level string `mapstructure:"logging.level"`
+	} `mapstructure:"logging"`
 }
 
-// LoadConfig reads the configuration based on the provided environment
-func LoadConfig(env string) Config {
-	var baseConfigFile = "config/base.yaml"
-	var envConfigFile string
-	switch env {
-	case "dev":
-		envConfigFile = "config/dev.yaml"
-	case "stage":
-		envConfigFile = "config/stage.yaml"
-	case "prod":
-		envConfigFile = "config/prod.yaml"
-	default:
-		log.Fatalf("Unknown environment %s", env)
+func LoadConfig() (*Config, error) {
+	viper.SetConfigFile("yaml")
+	viper.AddConfigPath("config")
+
+	// Determine the environment (e.g., "dev", "prod", "stage")
+	env := os.Getenv("APP_ENV")
+	if env == "" {
+		env = "dev" // Default to 'dev' if no environment is set
 	}
 
-	baseConfig := loadBaseConfig(baseConfigFile)
-	envConfig := loadEnvConfig(envConfigFile)
-
-	return Config{
-		BaseConfig:  baseConfig,
-		DatabaseURL: envConfig.DatabaseURL,
-	}
-}
-
-// Load base configuration from base config file
-func loadBaseConfig(file string) BaseConfig {
-	data, err := os.ReadFile(file)
-	if err != nil {
-		log.Fatalf("Failed to read base config file: %v", err)
+	// Load the base configuration file
+	viper.SetConfigFile("./config/base.yaml")
+	if err := viper.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("error reading base config file: %w", err)
 	}
 
-	var baseConfig BaseConfig
-	if err := yaml.Unmarshal(data, &baseConfig); err != nil {
-		log.Fatalf("failed to unmarshal base config: %v", err)
+	// Load the environment-specific configuration file (e.g., config.prod.yaml)
+	envConfigFile := fmt.Sprintf("%s.yaml", env)
+	viper.SetConfigFile(envConfigFile)
+	if err := viper.MergeInConfig(); err != nil {
+		return nil, fmt.Errorf("error reading environment config file %s: %w", envConfigFile, err)
 	}
 
-	return baseConfig
-}
+	// Automatically load environment variables (like DATABASE_HOST, LOGGING_LEVEL)
+	viper.AutomaticEnv()
 
-// Load environment-specific configuration
-func loadEnvConfig(file string) Config {
-	data, err := os.ReadFile(file)
-	if err != nil {
-		log.Fatalf("failed to read env config file: %v", err)
+	// Optionally, you can read from a .env file in local development
+	if err := viper.ReadInConfig(); err != nil {
+		log.Println("Warning: Could not read .env file. Make sure it exists if you're using one.")
 	}
 
-	var envConfig Config
-	if err := yaml.Unmarshal(data, &envConfig); err != nil {
-		log.Fatalf("failed to unmarshal env config: %v", err)
+	// Unmarshal the configuration into a Config struct
+	var config Config
+	if err := viper.Unmarshal(&config); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal config: %w", err)
 	}
 
-	return envConfig
+	return &config, nil
 }

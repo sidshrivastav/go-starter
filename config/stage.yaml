@@ -1,1 +1,7 @@
-database_url: ""
+database:
+  host: "stage-db.example.com"
+  user: "stage-user"
+  password: "stage-password"
+
+logging:
+  level: "warn"
